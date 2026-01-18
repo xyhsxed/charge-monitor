@@ -65,7 +65,11 @@ def clean_history_csv():
         print(f"Error cleaning history csv: {e}")
 
 def main():
-    timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+    now = datetime.datetime.now()
+    timestamp = now.strftime('%Y-%m-%d %H:%M:%S')
+    # Add 8 hours for CSV timestamp as requested
+    csv_timestamp = (now + datetime.timedelta(hours=8)).strftime('%Y-%m-%d %H:%M:%S')
+    
     print(f"[{timestamp}] Starting data fetch...")
     
     frontend_data = [] # Data structure for frontend status.json
@@ -113,7 +117,7 @@ def main():
                     # User requested "history data record", usually implies all valid data points.
                     # But to save space, let's log everything for now, relying on the cleaner.
                     history_records.append([
-                        timestamp,
+                        csv_timestamp,
                         device_id,
                         p_idx + 1,
                         current,
