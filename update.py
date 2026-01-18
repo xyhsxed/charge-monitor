@@ -80,7 +80,7 @@ def main():
         
         device_info = {
             "id": device_id,
-            "name": f"桩{i+1}",
+            "name": f"充电桩{i+1}",
             "updated_at": timestamp,
             "ports": []
         }
@@ -162,3 +162,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
