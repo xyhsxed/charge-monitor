@@ -29,7 +29,7 @@
                     </svg>
                     <h1 class="text-xl font-bold text-gray-900">教四充电桩实时监控</h1>
                 </div>
-<!-- Updated-at removed -->
+                <div class="text-xs text-gray-500 font-mono w-24 text-right" id="refresh-countdown">刷新: 60s</div>
             </div>
         </div>
     </nav>
@@ -146,8 +146,22 @@
             container.innerHTML = '';
 
             devices.forEach((device) => {
-                const updatedTime = device.updated_at ? device.updated_at.split(' ')[1] : '--:--';
-                const timeDiff = device.updated_at ? Math.floor((new Date() - new Date(device.updated_at)) / 60000) : null;
+                // Timezone fix: Add 8 hours
+                let updatedTime = '--:--';
+                let timeDiff = null;
+
+                if (device.updated_at) {
+                    const date = new Date(device.updated_at);
+                    // Add 8 hours
+                    const movedDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+                    
+                    const h = movedDate.getHours().toString().padStart(2, '0');
+                    const m = movedDate.getMinutes().toString().padStart(2, '0');
+                    const s = movedDate.getSeconds().toString().padStart(2, '0');
+                    updatedTime = `${h}:${m}:${s}`;
+                    
+                    timeDiff = Math.floor((new Date() - movedDate) / 60000);
+                }
                 
                 let timeClass = 'text-gray-400';
                 if (timeDiff !== null && timeDiff > 10) timeClass = 'text-red-400 font-bold'; // Highlight stale data
@@ -173,7 +187,7 @@
                                 return `
                                 <div class="flex flex-col p-2 rounded-lg border ${statusColor} transition-colors relative group">
                                     <div class="flex justify-between items-center mb-1">
-                                        <span class="text-xs font-bold opacity-70">Port${port.port_number}</span>
+                                        <span class="text-xs font-bold opacity-70">Port ${port.port_number}</span>
                                         ${isOffline ? '<span class="text-[10px]">离线</span>' : ''}
                                         ${port.status === 1 ? '<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>' : ''}
                                     </div>
@@ -198,13 +212,24 @@
         // Initial load
         fetchData();
 
-        // Auto-refresh every 60 seconds
-        refreshTimer = setInterval(fetchData, 60000);
+        // Auto-refresh with countdown
+        let countdown = 60;
+        setInterval(() => {
+            const el = document.getElementById('refresh-countdown');
+            if (countdown > 0) {
+                countdown--;
+                if (el) el.textContent = `刷新: ${countdown}s`;
+            } else {
+                fetchData();
+                countdown = 60;
+                if (el) el.textContent = `刷新: ${countdown}s`;
+            }
+        }, 1000);
 
         // --- Chart Logic ---
         let historyData = [];
         let myChart = null;
-        let selectedHours = 4; // Default 4 hours
+        let selectedHours = 3; // Default 3 hours
 
         // Init Port Options
         const portSelect = document.getElementById('chart-port');
@@ -363,8 +388,8 @@
         // Init
         initChart();
         loadHistory();
-        // Reload history every 5 minutes
-        setInterval(loadHistory, 300000);
+        // Reload history every 1 minutes
+        setInterval(loadHistory, 60000);
 
     </script>
 </body>
