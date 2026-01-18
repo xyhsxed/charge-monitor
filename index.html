@@ -58,13 +58,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
                         <select id="theme-selector" onchange="handleThemeChange(this.value)" class="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                            <option value="auto">Auto</option>
-                            <option value="light">Light</option>
-                            <option value="dark">Dark</option>
+                            <option value="auto">自动主题</option>
+                            <option value="light">日间主题</option>
+                            <option value="dark">夜间主题</option>
                         </select>
                     </div>
 
-                    <div class="text-xs text-gray-500 font-mono w-20 text-right dark:text-gray-400" id="refresh-countdown">刷新: 60s</div>
+                    <div class="text-xs text-gray-500 font-mono w-20 text-right dark:text-gray-400" id="refresh-countdown">自动刷新: 60s</div>
                 </div>
             </div>
         </div>
@@ -92,15 +92,15 @@
                     <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                     </svg>
-                    历史电流趋势
+                    历史电流
                 </h2>
                 
                 <div class="flex flex-wrap items-center gap-3">
                     <select id="chart-device" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                        <option value="423297">桩1 (423297)</option>
-                        <option value="417598">桩2 (417598)</option>
-                        <option value="418297">桩3 (418297)</option>
-                        <option value="418351">桩4 (418351)</option>
+                        <option value="423297">充电桩1</option>
+                        <option value="417598">充电桩2</option>
+                        <option value="418297">充电桩3</option>
+                        <option value="418351">充电桩4</option>
                     </select>
                     
                     <select id="chart-port" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
@@ -108,16 +108,16 @@
                     
                     <div class="inline-flex rounded-md shadow-sm" role="group">
                         <button type="button" onclick="updateTimeRange(4)" class="time-range-btn px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 bg-gray-100 text-blue-700 active dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="3">
-                            3小时
+                            3h
                         </button>
                         <button type="button" onclick="updateTimeRange(8)" class="time-range-btn px-4 py-2 text-sm font-medium text-gray-900 bg-white border-t border-b border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="8">
-                            8小时
+                            8h
                         </button>
                         <button type="button" onclick="updateTimeRange(12)" class="time-range-btn px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="12">
-                            12小时
+                            12h
                         </button>
                         <button type="button" onclick="updateTimeRange(0)" class="time-range-btn ml-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="0">
-                            全部
+                            All
                         </button>
                     </div>
                 </div>
@@ -240,11 +240,11 @@
                         <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/50 dark:border-gray-600">
                             <div>
                                 <h3 class="text-lg font-bold text-gray-800 dark:text-white">${device.name}</h3>
-                                <div class="text-xs text-gray-400 font-mono">ID: ${device.id}</div>
+                                <div class="text-xs text-gray-400 font-mono">ID:${device.id}</div>
                             </div>
                             <div class="text-right">
                                 <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${device.ports.filter(p => p.current > 50).length}<span class="text-sm text-gray-400 font-normal">/12</span></div>
-                                <div class="text-xs ${timeClass}">数据: ${updatedTime}</div>
+                                <div class="text-xs ${timeClass}">上次更新: ${updatedTime}</div>
                             </div>
                         </div>
                         <div class="p-4 grid grid-cols-2 gap-3">
@@ -470,5 +470,6 @@
     </script>
 </body>
 </html>
+
 
 
