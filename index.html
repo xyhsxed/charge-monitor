@@ -134,12 +134,16 @@
         </div>
     </footer>
 
-    <script>
+<script>
+        // 1. 全局变量声明 (放在最前，防止报错)
         const API_URL = './data/status.json';
         let refreshTimer = null;
+        let countdown = 60;
+        let historyData = [];
+        let myChart = null;
+        let selectedHours = 3; // 默认显示3小时
 
-        // --- THEME LOGIC START ---
-        
+        // 2. 主题切换逻辑
         function handleThemeChange(mode) {
             localStorage.setItem('theme', mode);
             applyTheme();
@@ -147,62 +151,48 @@
 
         function applyTheme() {
             let mode = localStorage.getItem('theme') || 'auto';
-            // Sync selector value
-            document.getElementById('theme-selector').value = mode;
+            // 同步下拉框状态
+            const selector = document.getElementById('theme-selector');
+            if(selector) selector.value = mode;
 
             let isDark = false;
             if (mode === 'auto') {
                 const hour = new Date().getHours();
-                // 晚上6点 (18) 到 早上6点 (6) 为深色模式
+                // 18:00 到 06:00 为深色模式
                 isDark = hour >= 18 || hour < 6;
             } else {
                 isDark = mode === 'dark';
             }
 
+            // 切换 HTML class
             if (isDark) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
 
-            // Reload chart to apply ECharts theme
-            if (myChart) {
-                // ECharts needs re-initialization to switch global themes perfectly
-                const currentOpt = myChart.getOption();
-                myChart.dispose();
-                initChart(isDark ? 'dark' : undefined); 
-                // Restore data logic is handled by updateChart() usually, 
-                // but let's just trigger updateChart to be safe
-                updateChart(); 
+            // ECharts 主题重置 (如果图表已存在则销毁重建，不存在则尝试初始化)
+            const chartDom = document.getElementById('main-chart');
+            if (chartDom) {
+                if (myChart) {
+                    myChart.dispose();
+                }
+                // 使用 dark 主题或默认主题重新初始化
+                initChart(isDark ? 'dark' : undefined);
+                // 重新渲染数据
+                updateChart();
             }
         }
 
-        // Apply theme immediately on load
-        applyTheme();
-
-        // Check auto theme every minute (in case time crosses 18:00 or 06:00 while page is open)
-        setInterval(() => {
-            if (localStorage.getItem('theme') === 'auto' || !localStorage.getItem('theme')) {
-                applyTheme();
-            }
-        }, 60000);
-
-        // --- THEME LOGIC END ---
-
+        // 3. 辅助函数
         function getStatusColor(current) {
-            // Updated for Dark Mode compatibility using Tailwind's dark modifiers
-            // Using rgba/opacity approach for dark mode to keep it readable
             if (current <= 50) return 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300';
             if (current <= 500) return 'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300';
             if (current <= 1000) return 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-300';
             return 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300';
         }
 
-        function getStatusBadge(current) {
-            if (current <= 50) return '<span class="px-2 py-0.5 text-xs rounded-full bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200">空闲</span>';
-            return `<span class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800 font-mono dark:bg-blue-900 dark:text-blue-200">${current} mA</span>`;
-        }
-
+        // 4. 数据获取与渲染
         async function fetchData() {
             try {
                 const response = await fetch(API_URL + '?t=' + new Date().getTime());
@@ -227,14 +217,12 @@
             container.innerHTML = '';
 
             devices.forEach((device) => {
-                // Timezone fix: Add 8 hours
                 let updatedTime = '--:--';
                 let timeDiff = null;
 
                 if (device.updated_at) {
                     const date = new Date(device.updated_at);
-                    // Add 8 hours
-                    const movedDate = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+                    const movedDate = new Date(date.getTime() + 8 * 60 * 60 * 1000); // UTC+8
                     
                     const h = movedDate.getHours().toString().padStart(2, '0');
                     const m = movedDate.getMinutes().toString().padStart(2, '0');
@@ -290,73 +278,40 @@
             });
         }
 
-        // Initial load
-        fetchData();
-
-        // Auto-refresh with countdown
-        let countdown = 60;
-        setInterval(() => {
-            const el = document.getElementById('refresh-countdown');
-            if (countdown > 0) {
-                countdown--;
-                if (el) el.textContent = `刷新: ${countdown}s`;
-            } else {
-                fetchData();
-                countdown = 60;
-                if (el) el.textContent = `刷新: ${countdown}s`;
-            }
-        }, 1000);
-
-        // --- Chart Logic ---
-        let historyData = [];
-        let myChart = null;
-        let selectedHours = 3; // Default 3 hours
-
-        // Init Port Options
-        const portSelect = document.getElementById('chart-port');
-        for (let i = 1; i <= 12; i++) {
-            const opt = document.createElement('option');
-            opt.value = i;
-            opt.text = 'Port ' + i;
-            portSelect.appendChild(opt);
-        }
-
-        // Init Chart (Modified to accept theme)
+        // 5. 图表逻辑
         function initChart(theme) {
             const chartDom = document.getElementById('main-chart');
             if (!chartDom) return;
-            // Dispose existing to cleanly switch theme
-            if (echarts.getInstanceByDom(chartDom)) {
-                echarts.dispose(chartDom);
+            
+            // 如果已经有实例，先不处理（由 applyTheme 里的 dispose 处理），这里主要负责新建
+            if (!echarts.getInstanceByDom(chartDom)) {
+                myChart = echarts.init(chartDom, theme);
+                
+                window.addEventListener('resize', function() {
+                    myChart && myChart.resize();
+                });
+                
+                const devSelect = document.getElementById('chart-device');
+                if (devSelect) {
+                    devSelect.removeEventListener('change', updateChart);
+                    devSelect.addEventListener('change', updateChart);
+                }
+                
+                const portSelect = document.getElementById('chart-port');
+                if(portSelect) {
+                    portSelect.removeEventListener('change', updateChart);
+                    portSelect.addEventListener('change', updateChart);
+                }
             }
-            // Initialize with 'dark' or default (light)
-            myChart = echarts.init(chartDom, theme);
-            
-            window.addEventListener('resize', function() {
-                myChart && myChart.resize();
-            });
-            
-            // Listeners
-            const devSelect = document.getElementById('chart-device');
-            if (devSelect) devSelect.removeEventListener('change', updateChart); // Clean up
-            if (devSelect) devSelect.addEventListener('change', updateChart);
-            
-            portSelect.removeEventListener('change', updateChart); // Clean up
-            portSelect.addEventListener('change', updateChart);
         }
 
         function updateTimeRange(hours) {
             selectedHours = hours;
             const isDark = document.documentElement.classList.contains('dark');
-            const activeClass = isDark ? ['bg-gray-700', 'text-white', 'border-gray-500'] : ['bg-gray-100', 'text-blue-700', 'active', 'border-blue-700'];
-            const inactiveClass = isDark ? ['bg-gray-800', 'text-gray-300', 'border-gray-600'] : ['bg-white', 'text-gray-900', 'border-gray-200'];
-
-            // Since we use Tailwind utility classes in HTML, purely toggling them in JS can be verbose.
-            // For simplicity, we just rebuild the classes or toggle the 'active' state roughly.
-            // But to support dark mode correctly on buttons, refreshing the UI state:
+            
             document.querySelectorAll('.time-range-btn').forEach(btn => {
                 const btnHours = parseInt(btn.getAttribute('data-hours'));
-                // Reset basic styles
+                // 重置基础样式
                 btn.className = `time-range-btn px-4 py-2 text-sm font-medium border focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white ${hours === 0 ? 'ml-2 rounded-lg' : (hours === 4 ? 'rounded-l-lg' : (hours === 12 ? 'rounded-r-md' : 'border-t border-b'))}`;
                 
                 if (btnHours === hours) {
@@ -389,14 +344,12 @@
             const deviceId = document.getElementById('chart-device').value;
             const portNum = document.getElementById('chart-port').value;
             
-            // Calculate cutoff time
             let cutoff = null;
             if (selectedHours > 0) {
                 const now = new Date();
                 cutoff = new Date(now.getTime() - selectedHours * 60 * 60 * 1000);
             }
 
-            // Filter data
             const filtered = historyData.filter(row => {
                 if (row.device_id != deviceId) return false;
                 if (row.port != portNum) return false;
@@ -412,15 +365,14 @@
                 return true;
             });
 
-            // Prepare Series
             const times = filtered.map(item => item.timestamp);
             const currents = filtered.map(item => parseFloat(item.current));
 
             const isDark = document.documentElement.classList.contains('dark');
-            const lineColor = isDark ? '#60a5fa' : '#2563EB'; // Lighter blue for dark mode
+            const lineColor = isDark ? '#60a5fa' : '#2563EB';
 
             const option = {
-                backgroundColor: 'transparent', // Let container color show
+                backgroundColor: 'transparent',
                 tooltip: {
                     trigger: 'axis',
                     formatter: function (params) {
@@ -450,15 +402,8 @@
                     }
                 },
                 dataZoom: [
-                    {
-                        type: 'inside',
-                        start: 0,
-                        end: 100
-                    },
-                    {
-                        start: 0,
-                        end: 100
-                    }
+                    { type: 'inside', start: 0, end: 100 },
+                    { start: 0, end: 100 }
                 ],
                 series: [
                     {
@@ -467,10 +412,7 @@
                         data: currents,
                         smooth: true,
                         showSymbol: false,
-                        lineStyle: {
-                            width: 2,
-                            color: lineColor
-                        },
+                        lineStyle: { width: 2, color: lineColor },
                         areaStyle: {
                             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                                 { offset: 0, color: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(37, 99, 235, 0.5)' },
@@ -483,14 +425,50 @@
 
             myChart.setOption(option, true);
         }
+
+        // --- 初始化序列 (放在最后执行) ---
         
-        // Init
-        // Note: Chart init is now handled in applyTheme()
+        // 1. 初始化下拉框选项
+        const portSelect = document.getElementById('chart-port');
+        if(portSelect && portSelect.options.length === 0) {
+            for (let i = 1; i <= 12; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.text = 'Port ' + i;
+                portSelect.appendChild(opt);
+            }
+        }
+
+        // 2. 初始化主题 (这会触发图表初始化)
+        applyTheme();
+
+        // 3. 初始加载数据
+        fetchData();
         loadHistory();
-        // Reload history every 1 minutes
-        setInterval(loadHistory, 60000);
+
+        // 4. 定时刷新
+        setInterval(() => {
+            const el = document.getElementById('refresh-countdown');
+            if (countdown > 0) {
+                countdown--;
+                if (el) el.textContent = `刷新: ${countdown}s`;
+            } else {
+                fetchData();
+                loadHistory(); // 历史数据也定期刷新
+                countdown = 60;
+                if (el) el.textContent = `刷新: ${countdown}s`;
+            }
+        }, 1000);
+
+        // 5. 自动主题检测 (每分钟检查一次时间)
+        setInterval(() => {
+            if (!localStorage.getItem('theme') || localStorage.getItem('theme') === 'auto') {
+                applyTheme();
+            }
+        }, 60000);
 
     </script>
 </body>
 </html>
+
 
