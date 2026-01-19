@@ -2,14 +2,15 @@ name: Charge Monitor
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # Run every 10 minutes
-  workflow_dispatch: # Allow manual trigger
+    - cron: '*/5 * * * *' # 每5分钟运行一次
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
+    timeout-minutes: 2 # 设置整个 Job 的超时时间为 2 分钟
     permissions:
-      contents: write # Important: allow pushing commits
+      contents: write # 允许推送 commit
 
     steps:
     - name: Checkout code
@@ -28,9 +29,18 @@ jobs:
       run: python update.py
 
     - name: Commit and push changes
+      env:
+        TZ: Asia/Shanghai
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
         git add data/status.json data/history.csv
-        # Commit only if changes exist
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update charge data" && git push)
+        
+        CURRENT_TIME=$(date "+%Y-%m-%d %H:%M:%S")
+        
+        if ! git diff --quiet || ! git diff --staged --quiet; then
+          git commit -m "Auto-update charge data ($CURRENT_TIME)"
+          git push
+        else
+          echo "No changes to commit"
+        fi
