@@ -237,6 +237,7 @@
 
                 const cardHTML = `
                     <div class="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800/70 dark:border-gray-700">
+                    <div class="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800/70 dark:border-gray-700">
                         <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/50 dark:border-gray-600">
                             <div>
                                 <h3 class="text-lg font-bold text-gray-800 dark:text-white">${device.name}</h3>
@@ -460,6 +461,7 @@
             for (let i = 1; i <= 12; i++) {
                 const opt = document.createElement('option');
                 opt.value = i;
+                opt.text = '端口' + i;
                 opt.text = '端口' + i;
                 portSelect.appendChild(opt);
             }
