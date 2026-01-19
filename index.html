@@ -20,7 +20,7 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        /* 自定义滚动条样式，使其在暗色模式下更好看 */
+        /* 自定义滚动条样式 */
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -106,20 +106,21 @@
                     <select id="chart-port" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                         </select>
                     
-                    <div class="inline-flex rounded-md shadow-sm" role="group">
-                        <button type="button" onclick="updateTimeRange(4)" class="time-range-btn px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-l-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 bg-gray-100 text-blue-700 active dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-600 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="3">
+                    <div class="inline-flex rounded-md shadow-sm isolate" role="group">
+                        <button type="button" onclick="updateTimeRange(3)" class="time-range-btn relative px-4 py-2 text-sm font-medium border rounded-l-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="3">
                             3h
                         </button>
-                        <button type="button" onclick="updateTimeRange(8)" class="time-range-btn px-4 py-2 text-sm font-medium text-gray-900 bg-white border-t border-b border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="8">
+                        <button type="button" onclick="updateTimeRange(8)" class="time-range-btn relative -ml-px px-4 py-2 text-sm font-medium border focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="8">
                             8h
                         </button>
-                        <button type="button" onclick="updateTimeRange(12)" class="time-range-btn px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-r-md hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="12">
+                        <button type="button" onclick="updateTimeRange(12)" class="time-range-btn relative -ml-px px-4 py-2 text-sm font-medium border rounded-r-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="12">
                             12h
                         </button>
-                        <button type="button" onclick="updateTimeRange(0)" class="time-range-btn ml-2 px-4 py-2 text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded-lg hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:hover:text-white dark:hover:bg-gray-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="0">
-                            全部
-                        </button>
                     </div>
+                    
+                    <button type="button" onclick="updateTimeRange(0)" class="time-range-btn ml-2 px-4 py-2 text-sm font-medium border rounded-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="0">
+                        全部
+                    </button>
                 </div>
             </div>
             
@@ -135,13 +136,17 @@
     </footer>
 
 <script>
-        // 1. 全局变量声明 (放在最前，防止报错)
+        // 1. 全局变量声明
         const API_URL = './data/status.json';
         let refreshTimer = null;
         let countdown = 60;
         let historyData = [];
         let myChart = null;
-        let selectedHours = 3; // 默认显示3小时
+        let selectedHours = 3; 
+
+        // 定义 Active 和 Inactive 的样式类（仅颜色相关，不包含布局类）
+        const BTN_ACTIVE_CLASSES = ['bg-gray-100', 'text-blue-700', 'border-blue-700', 'z-20', 'dark:bg-gray-600', 'dark:text-white', 'dark:border-gray-500'];
+        const BTN_INACTIVE_CLASSES = ['bg-white', 'text-gray-900', 'border-gray-200', 'hover:bg-gray-100', 'hover:text-blue-700', 'dark:bg-gray-800', 'dark:text-gray-300', 'dark:border-gray-600', 'dark:hover:bg-gray-700', 'dark:hover:text-white'];
 
         // 2. 主题切换逻辑
         function handleThemeChange(mode) {
@@ -151,36 +156,31 @@
 
         function applyTheme() {
             let mode = localStorage.getItem('theme') || 'auto';
-            // 同步下拉框状态
             const selector = document.getElementById('theme-selector');
             if(selector) selector.value = mode;
 
             let isDark = false;
             if (mode === 'auto') {
                 const hour = new Date().getHours();
-                // 18:00 到 06:00 为深色模式
                 isDark = hour >= 18 || hour < 6;
             } else {
                 isDark = mode === 'dark';
             }
 
-            // 切换 HTML class
             if (isDark) {
                 document.documentElement.classList.add('dark');
             } else {
                 document.documentElement.classList.remove('dark');
             }
 
-            // ECharts 主题重置 (如果图表已存在则销毁重建，不存在则尝试初始化)
             const chartDom = document.getElementById('main-chart');
             if (chartDom) {
                 if (myChart) {
                     myChart.dispose();
                 }
-                // 使用 dark 主题或默认主题重新初始化
                 initChart(isDark ? 'dark' : undefined);
-                // 重新渲染数据
-                updateChart();
+                // 重新应用按钮样式以匹配暗色模式
+                updateTimeRange(selectedHours);
             }
         }
 
@@ -283,7 +283,6 @@
             const chartDom = document.getElementById('main-chart');
             if (!chartDom) return;
             
-            // 如果已经有实例，先不处理（由 applyTheme 里的 dispose 处理），这里主要负责新建
             if (!echarts.getInstanceByDom(chartDom)) {
                 myChart = echarts.init(chartDom, theme);
                 
@@ -307,17 +306,19 @@
 
         function updateTimeRange(hours) {
             selectedHours = hours;
-            const isDark = document.documentElement.classList.contains('dark');
             
+            // 修复 Bug 2: 只切换颜色类，不覆盖结构类（如 rounded 等）
             document.querySelectorAll('.time-range-btn').forEach(btn => {
                 const btnHours = parseInt(btn.getAttribute('data-hours'));
-                // 重置基础样式
-                btn.className = `time-range-btn px-4 py-2 text-sm font-medium border focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white ${hours === 0 ? 'ml-2 rounded-lg' : (hours === 4 ? 'rounded-l-lg' : (hours === 12 ? 'rounded-r-md' : 'border-t border-b'))}`;
                 
+                // 先移除所有状态类
+                btn.classList.remove(...BTN_ACTIVE_CLASSES);
+                btn.classList.remove(...BTN_INACTIVE_CLASSES);
+
                 if (btnHours === hours) {
-                     btn.classList.add('bg-gray-100', 'text-blue-700', 'border-blue-700', 'dark:bg-gray-600', 'dark:text-white', 'dark:border-gray-500');
+                     btn.classList.add(...BTN_ACTIVE_CLASSES);
                 } else {
-                     btn.classList.add('bg-white', 'text-gray-900', 'border-gray-200', 'hover:bg-gray-100', 'hover:text-blue-700', 'dark:bg-gray-800', 'dark:text-gray-300', 'dark:border-gray-600', 'dark:hover:bg-gray-700', 'dark:hover:text-white');
+                     btn.classList.add(...BTN_INACTIVE_CLASSES);
                 }
             });
             updateChart();
@@ -365,8 +366,15 @@
                 return true;
             });
 
-            const times = filtered.map(item => item.timestamp);
-            const currents = filtered.map(item => parseFloat(item.current));
+            // 修复 Bug 1: 构造 [时间, 数值] 的二维数组，用于 ECharts 时间轴
+            const seriesData = filtered.map(item => {
+                let timeStr = item.timestamp;
+                // 确保时间字符串格式标准，便于 ECharts 解析
+                if (timeStr && timeStr.indexOf('T') === -1) {
+                    timeStr = timeStr.replace(' ', 'T');
+                }
+                return [timeStr, parseFloat(item.current)];
+            });
 
             const isDark = document.documentElement.classList.contains('dark');
             const lineColor = isDark ? '#60a5fa' : '#2563EB';
@@ -377,7 +385,10 @@
                     trigger: 'axis',
                     formatter: function (params) {
                         const p = params[0];
-                        return `${p.axisValue}<br/>${p.marker}电流: <b>${p.value} mA</b>`;
+                        // 格式化时间显示
+                        let date = new Date(p.value[0]);
+                        let timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        return `${timeStr}<br/>${p.marker}电流: <b>${p.value[1]} mA</b>`;
                     }
                 },
                 grid: {
@@ -387,9 +398,15 @@
                     containLabel: true
                 },
                 xAxis: {
-                    type: 'category',
-                    data: times,
-                    boundaryGap: false
+                    type: 'time', // 修复 Bug 1: 将轴类型改为 time
+                    boundaryGap: false,
+                    splitLine: {
+                        show: false
+                    },
+                    axisLabel: {
+                        color: isDark ? '#9ca3af' : '#4b5563',
+                        formatter: '{HH}:{mm}' // 简化时间显示
+                    }
                 },
                 yAxis: {
                     type: 'value',
@@ -399,6 +416,12 @@
                             type: 'dashed',
                             color: isDark ? '#374151' : '#ccc'
                         }
+                    },
+                    axisLabel: {
+                        color: isDark ? '#9ca3af' : '#4b5563'
+                    },
+                    nameTextStyle: {
+                        color: isDark ? '#9ca3af' : '#4b5563'
                     }
                 },
                 dataZoom: [
@@ -409,10 +432,13 @@
                     {
                         name: 'Current',
                         type: 'line',
-                        data: currents,
+                        data: seriesData, // 使用新的数据格式
                         smooth: true,
-                        showSymbol: false,
+                        showSymbol: true, // 修复 Bug 1: 显示数据点
+                        symbolSize: 6,    // 调整点的大小
+                        symbol: 'circle',
                         lineStyle: { width: 2, color: lineColor },
+                        itemStyle: { color: lineColor },
                         areaStyle: {
                             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                                 { offset: 0, color: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(37, 99, 235, 0.5)' },
@@ -426,7 +452,7 @@
             myChart.setOption(option, true);
         }
 
-        // --- 初始化序列 (放在最后执行) ---
+        // --- 初始化序列 ---
         
         // 1. 初始化下拉框选项
         const portSelect = document.getElementById('chart-port');
@@ -439,7 +465,7 @@
             }
         }
 
-        // 2. 初始化主题 (这会触发图表初始化)
+        // 2. 初始化主题
         applyTheme();
 
         // 3. 初始加载数据
@@ -454,13 +480,13 @@
                 if (el) el.textContent = `刷新: ${countdown}s`;
             } else {
                 fetchData();
-                loadHistory(); // 历史数据也定期刷新
+                loadHistory(); 
                 countdown = 60;
                 if (el) el.textContent = `刷新: ${countdown}s`;
             }
         }, 1000);
 
-        // 5. 自动主题检测 (每分钟检查一次时间)
+        // 5. 自动主题检测
         setInterval(() => {
             if (!localStorage.getItem('theme') || localStorage.getItem('theme') === 'auto') {
                 applyTheme();
@@ -470,7 +496,3 @@
     </script>
 </body>
 </html>
-
-
-
-
