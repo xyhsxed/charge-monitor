@@ -8,6 +8,17 @@
     <script>
         tailwind.config = {
             darkMode: 'class',
+            theme: {
+                extend: {
+                    // 自定义毛玻璃背景色
+                    colors: {
+                        glass: {
+                            light: 'rgba(255, 255, 255, 0.7)',
+                            dark: 'rgba(31, 41, 55, 0.7)'
+                        }
+                    }
+                }
+            }
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
@@ -20,7 +31,28 @@
             from { opacity: 0; }
             to { opacity: 1; }
         }
-        /* 自定义滚动条样式 */
+        
+        /* 网页内样式的自定义下拉框 */
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+
+        /* 全局背景装饰，增强毛玻璃视觉效果 */
+        .bg-glow {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            background: rgba(37, 99, 235, 0.15);
+            filter: blur(80px);
+            z-index: -1;
+        }
+
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -35,14 +67,14 @@
         .dark ::-webkit-scrollbar-thumb {
             background: #475569; 
         }
-        .dark ::-webkit-scrollbar-thumb:hover {
-            background: #64748b; 
-        }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen text-gray-800 font-sans transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
+<body class="bg-slate-50 min-h-screen text-gray-800 font-sans transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100 overflow-x-hidden">
 
-    <nav class="bg-white shadow-sm sticky top-0 z-50 transition-colors duration-300 dark:bg-gray-800 dark:border-b dark:border-gray-700">
+    <div class="bg-glow top-10 -left-20"></div>
+    <div class="bg-glow bottom-20 -right-20" style="background: rgba(147, 51, 234, 0.1);"></div>
+
+    <nav class="sticky top-0 z-50 backdrop-blur-md bg-white/70 border-b border-white/20 shadow-sm transition-colors duration-300 dark:bg-gray-800/70 dark:border-gray-700/50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
@@ -57,98 +89,79 @@
                         <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                         </svg>
-                        <select id="theme-selector" onchange="handleThemeChange(this.value)" class="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                            <option value="auto">自动</option>
+                        <select id="theme-selector" onchange="handleThemeChange(this.value)" 
+                            class="custom-select bg-white/50 border border-gray-200 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 pr-8 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white backdrop-blur-sm">
+                            <option value="auto">自动模式</option>
                             <option value="light">日间主题</option>
                             <option value="dark">夜间主题</option>
                         </select>
                     </div>
-
                     <div class="text-xs text-gray-500 font-mono w-20 text-right dark:text-gray-400" id="refresh-countdown">刷新: 60s</div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative">
         
         <div class="flex flex-wrap justify-center gap-4 mb-8 text-sm text-gray-600 dark:text-gray-300">
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>空闲 (&lt;50mA)</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></span>小电流 (50-500mA)</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>中电流 (500-1000mA)</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-600 mr-2"></span>大电流 (&gt;1000mA)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>空闲</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></span>小电流</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>中电流</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-600 mr-2"></span>大电流</div>
         </div>
 
         <div id="app-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
             <div class="col-span-full text-center py-20 text-gray-400">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
-                <p>正在加载数据...</p>
+                <p>正在加载实时数据...</p>
             </div>
         </div>
 
-        <div class="mt-12 bg-white rounded-xl shadow-lg border border-gray-100 p-6 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-700">
+        <div class="mt-12 backdrop-blur-md bg-white/60 rounded-2xl shadow-xl border border-white/40 p-6 transition-all duration-300 dark:bg-gray-800/60 dark:border-gray-700/50">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center dark:text-white">
                     <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                     </svg>
-                    历史电流
+                    历史电流曲线
                 </h2>
                 
                 <div class="flex flex-wrap items-center gap-3">
-                    <select id="chart-device" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                        <option value="423297">充电桩1</option>
-                        <option value="417598">充电桩2</option>
-                        <option value="418297">充电桩3</option>
-                        <option value="418351">充电桩4</option>
+                    <select id="chart-device" class="custom-select bg-white/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white backdrop-blur-sm transition-all">
+                        <option value="423297">充电桩1号</option>
+                        <option value="417598">充电桩2号</option>
+                        <option value="418297">充电桩3号</option>
+                        <option value="418351">充电桩4号</option>
                     </select>
                     
-                    <select id="chart-port" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
-                        </select>
+                    <select id="chart-port" class="custom-select bg-white/50 border border-gray-200 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2 dark:bg-gray-700/50 dark:border-gray-600 dark:text-white backdrop-blur-sm transition-all">
+                    </select>
                     
-                    <div class="inline-flex rounded-md shadow-sm isolate" role="group">
-                        <button type="button" onclick="updateTimeRange(3)" class="time-range-btn relative px-4 py-2 text-sm font-medium border rounded-l-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="3">
-                            3h
-                        </button>
-                        <button type="button" onclick="updateTimeRange(8)" class="time-range-btn relative -ml-px px-4 py-2 text-sm font-medium border focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="8">
-                            8h
-                        </button>
-                        <button type="button" onclick="updateTimeRange(12)" class="time-range-btn relative -ml-px px-4 py-2 text-sm font-medium border rounded-r-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="12">
-                            12h
-                        </button>
+                    <div class="inline-flex p-1 bg-gray-200/50 dark:bg-gray-700/50 rounded-xl backdrop-blur-sm" role="group">
+                        <button type="button" onclick="updateTimeRange(4)" class="time-range-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all" data-hours="3">3h</button>
+                        <button type="button" onclick="updateTimeRange(8)" class="time-range-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all" data-hours="8">8h</button>
+                        <button type="button" onclick="updateTimeRange(12)" class="time-range-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all" data-hours="12">12h</button>
+                        <button type="button" onclick="updateTimeRange(0)" class="time-range-btn px-4 py-1.5 text-xs font-medium rounded-lg transition-all" data-hours="0">全部</button>
                     </div>
-                    
-                    <button type="button" onclick="updateTimeRange(0)" class="time-range-btn ml-2 px-4 py-2 text-sm font-medium border rounded-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="0">
-                        全部
-                    </button>
                 </div>
             </div>
             
-            <div id="main-chart" class="w-full h-[400px]"></div>
+            <div id="main-chart" class="w-full h-[420px]"></div>
         </div>
-
     </main>
 
-    <footer class="bg-white border-t mt-12 py-6 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-700">
-        <div class="text-center text-gray-400 text-sm">
-            <p>&copy; 2026 Charging Monitor by xyh</p>
-        </div>
+    <footer class="mt-12 py-8 text-center text-gray-400 text-xs border-t border-gray-200/30 dark:border-gray-800/30">
+        <p>&copy; 2026 Charging Monitor · 高级可视化面板</p>
     </footer>
 
-<script>
-        // 1. 全局变量声明
+    <script>
         const API_URL = './data/status.json';
-        let refreshTimer = null;
         let countdown = 60;
         let historyData = [];
         let myChart = null;
-        let selectedHours = 3; 
+        let selectedHours = 3;
 
-        // 定义 Active 和 Inactive 的样式类（仅颜色相关，不包含布局类）
-        const BTN_ACTIVE_CLASSES = ['bg-gray-100', 'text-blue-700', 'border-blue-700', 'z-20', 'dark:bg-gray-600', 'dark:text-white', 'dark:border-gray-500'];
-        const BTN_INACTIVE_CLASSES = ['bg-white', 'text-gray-900', 'border-gray-200', 'hover:bg-gray-100', 'hover:text-blue-700', 'dark:bg-gray-800', 'dark:text-gray-300', 'dark:border-gray-600', 'dark:hover:bg-gray-700', 'dark:hover:text-white'];
-
-        // 2. 主题切换逻辑
         function handleThemeChange(mode) {
             localStorage.setItem('theme', mode);
             applyTheme();
@@ -175,38 +188,31 @@
 
             const chartDom = document.getElementById('main-chart');
             if (chartDom) {
-                if (myChart) {
-                    myChart.dispose();
-                }
+                if (myChart) myChart.dispose();
                 initChart(isDark ? 'dark' : undefined);
-                // 重新应用按钮样式以匹配暗色模式
-                updateTimeRange(selectedHours);
+                updateChart();
             }
         }
 
-        // 3. 辅助函数
         function getStatusColor(current) {
-            if (current <= 50) return 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300';
-            if (current <= 500) return 'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300';
-            if (current <= 1000) return 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-300';
-            return 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300';
+            if (current <= 50) return 'bg-green-500/10 border-green-500/20 text-green-600 dark:text-green-400';
+            if (current <= 500) return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-600 dark:text-yellow-400';
+            if (current <= 1000) return 'bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400';
+            return 'bg-red-500/10 border-red-500/20 text-red-600 dark:text-red-400';
         }
 
-        // 4. 数据获取与渲染
         async function fetchData() {
             try {
                 const response = await fetch(API_URL + '?t=' + new Date().getTime());
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) throw new Error('数据接口响应异常');
                 const data = await response.json();
                 render(data);
-                
             } catch (error) {
-                console.error('Error fetching data:', error);
+                console.error('Fetch error:', error);
                 document.getElementById('app-container').innerHTML = `
-                    <div class="col-span-full text-center py-10 text-red-500 bg-red-50 rounded-lg dark:bg-red-900/20 dark:text-red-400">
-                        <p class="font-bold">数据加载失败</p>
-                        <p class="text-sm mt-2">${error.message}</p>
-                        <button onclick="fetchData()" class="mt-4 px-4 py-2 bg-white border border-red-200 rounded shadow-sm hover:bg-gray-50 text-sm dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700">重试</button>
+                    <div class="col-span-full text-center py-10 text-red-500 backdrop-blur-md bg-red-50/50 rounded-2xl border border-red-200/50">
+                        <p class="font-bold">数据同步失败</p>
+                        <button onclick="fetchData()" class="mt-4 px-6 py-2 bg-white/80 rounded-full shadow-sm text-sm hover:bg-white transition-all">立即重试</button>
                     </div>
                 `;
             }
@@ -222,51 +228,42 @@
 
                 if (device.updated_at) {
                     const date = new Date(device.updated_at);
-                    const movedDate = new Date(date.getTime() + 8 * 60 * 60 * 1000); // UTC+8
-                    
-                    const h = movedDate.getHours().toString().padStart(2, '0');
-                    const m = movedDate.getMinutes().toString().padStart(2, '0');
-                    const s = movedDate.getSeconds().toString().padStart(2, '0');
-                    updatedTime = `${h}:${m}:${s}`;
-                    
+                    const movedDate = new Date(date.getTime() + 8 * 60 * 60 * 1000); 
+                    updatedTime = movedDate.toTimeString().split(' ')[0];
                     timeDiff = Math.floor((new Date() - movedDate) / 60000);
                 }
                 
-                let timeClass = 'text-gray-400';
-                if (timeDiff !== null && timeDiff > 10) timeClass = 'text-red-400 font-bold'; 
+                let timeClass = timeDiff !== null && timeDiff > 10 ? 'text-red-500 font-bold' : 'text-gray-400';
 
                 const cardHTML = `
-                    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800 dark:border-gray-700">
-                        <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/50 dark:border-gray-600">
+                    <div class="backdrop-blur-md bg-white/70 rounded-2xl shadow-lg border border-white/40 overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 fade-in flex flex-col dark:bg-gray-800/70 dark:border-gray-700/50">
+                        <div class="px-6 py-4 border-b border-gray-100/50 flex justify-between items-center bg-gray-50/30 dark:bg-gray-700/30 dark:border-gray-600/30">
                             <div>
-                                <h3 class="text-lg font-bold text-gray-800 dark:text-white">${device.name}</h3>
-                                <div class="text-xs text-gray-400 font-mono">ID:${device.id}</div>
+                                <h3 class="text-md font-bold text-gray-800 dark:text-white">${device.name}</h3>
+                                <div class="text-[10px] text-gray-400 font-mono opacity-60">ID:${device.id}</div>
                             </div>
                             <div class="text-right">
-                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${device.ports.filter(p => p.current > 50).length}<span class="text-sm text-gray-400 font-normal">/12</span></div>
-                                <div class="text-xs ${timeClass}">上次更新: ${updatedTime}</div>
+                                <div class="text-xl font-black text-blue-600 dark:text-blue-400">${device.ports.filter(p => p.current > 50).length}<span class="text-xs text-gray-400 font-normal ml-0.5">/12</span></div>
+                                <div class="text-[10px] ${timeClass}">${updatedTime}</div>
                             </div>
                         </div>
-                        <div class="p-4 grid grid-cols-2 gap-3">
+                        <div class="p-4 grid grid-cols-2 gap-2.5">
                             ${device.ports.map(port => {
-                                const voltage = (port.voltage / 100).toFixed(1);
                                 const isOffline = port.online === 0;
-                                const statusColor = isOffline ? 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-500' : getStatusColor(port.current);
-                                
+                                const statusColor = isOffline ? 'bg-gray-100/50 text-gray-400 border-transparent opacity-40' : getStatusColor(port.current);
                                 return `
-                                <div class="flex flex-col p-2 rounded-lg border ${statusColor} transition-colors relative group">
+                                <div class="flex flex-col p-2.5 rounded-xl border ${statusColor} transition-all relative group overflow-hidden">
                                     <div class="flex justify-between items-center mb-1">
-                                        <span class="text-xs font-bold opacity-70">Port ${port.port_number}</span>
-                                        ${isOffline ? '<span class="text-[10px]">离线</span>' : ''}
-                                        ${port.status === 1 ? '<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>' : ''}
+                                        <span class="text-[10px] font-bold opacity-70">P${port.port_number}</span>
+                                        ${port.status === 1 ? '<span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>' : ''}
                                     </div>
-                                    <div class="flex items-baseline space-x-1">
-                                        <span class="text-lg font-bold font-mono leading-none">${port.current}</span>
-                                        <span class="text-[10px] opacity-60">mA</span>
+                                    <div class="flex items-baseline gap-0.5">
+                                        <span class="text-md font-bold font-mono leading-none">${port.current}</span>
+                                        <span class="text-[9px] opacity-60">mA</span>
                                     </div>
-                                    <div class="flex justify-between mt-1 text-[10px] opacity-80 font-mono">
+                                    <div class="flex justify-between mt-1 text-[9px] opacity-60 font-mono">
                                         <span>${port.power}W</span>
-                                        <span>${voltage}V</span>
+                                        <span>${(port.voltage/100).toFixed(1)}V</span>
                                     </div>
                                 </div>
                                 `;
@@ -278,47 +275,24 @@
             });
         }
 
-        // 5. 图表逻辑
         function initChart(theme) {
             const chartDom = document.getElementById('main-chart');
             if (!chartDom) return;
+            myChart = echarts.init(chartDom, theme);
+            window.addEventListener('resize', () => myChart && myChart.resize());
             
-            if (!echarts.getInstanceByDom(chartDom)) {
-                myChart = echarts.init(chartDom, theme);
-                
-                window.addEventListener('resize', function() {
-                    myChart && myChart.resize();
-                });
-                
-                const devSelect = document.getElementById('chart-device');
-                if (devSelect) {
-                    devSelect.removeEventListener('change', updateChart);
-                    devSelect.addEventListener('change', updateChart);
-                }
-                
-                const portSelect = document.getElementById('chart-port');
-                if(portSelect) {
-                    portSelect.removeEventListener('change', updateChart);
-                    portSelect.addEventListener('change', updateChart);
-                }
-            }
+            document.getElementById('chart-device').addEventListener('change', updateChart);
+            document.getElementById('chart-port').addEventListener('change', updateChart);
         }
 
         function updateTimeRange(hours) {
             selectedHours = hours;
-            
-            // 修复 Bug 2: 只切换颜色类，不覆盖结构类（如 rounded 等）
             document.querySelectorAll('.time-range-btn').forEach(btn => {
                 const btnHours = parseInt(btn.getAttribute('data-hours'));
-                
-                // 先移除所有状态类
-                btn.classList.remove(...BTN_ACTIVE_CLASSES);
-                btn.classList.remove(...BTN_INACTIVE_CLASSES);
-
                 if (btnHours === hours) {
-                     btn.classList.add(...BTN_ACTIVE_CLASSES);
+                    btn.className = "time-range-btn px-4 py-1.5 text-xs font-bold rounded-lg bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-all";
                 } else {
-                     btn.classList.add(...BTN_INACTIVE_CLASSES);
+                    btn.className = "time-range-btn px-4 py-1.5 text-xs font-medium rounded-lg text-gray-500 hover:bg-gray-300/50 dark:hover:bg-gray-600/50 transition-all";
                 }
             });
             updateChart();
@@ -329,170 +303,85 @@
                 download: true,
                 header: true,
                 skipEmptyLines: true,
-                complete: function(results) {
+                complete: (results) => {
                     historyData = results.data;
                     updateChart();
-                },
-                error: function(err) {
-                    console.error("CSV Parse Error:", err);
                 }
             });
         }
 
         function updateChart() {
-            if (!myChart || !historyData || historyData.length === 0) return;
+            if (!myChart || !historyData.length) return;
 
             const deviceId = document.getElementById('chart-device').value;
             const portNum = document.getElementById('chart-port').value;
-            
-            let cutoff = null;
-            if (selectedHours > 0) {
-                const now = new Date();
-                cutoff = new Date(now.getTime() - selectedHours * 60 * 60 * 1000);
-            }
+            let cutoff = selectedHours > 0 ? new Date(new Date().getTime() - selectedHours * 3600000) : null;
 
             const filtered = historyData.filter(row => {
-                if (row.device_id != deviceId) return false;
-                if (row.port != portNum) return false;
-                
-                if (cutoff) {
-                    let timeStr = row.timestamp;
-                    if (timeStr && timeStr.indexOf('T') === -1) {
-                        timeStr = timeStr.replace(' ', 'T');
-                    }
-                    const rowDate = new Date(timeStr); 
-                    if (rowDate < cutoff) return false;
-                }
+                if (row.device_id != deviceId || row.port != portNum) return false;
+                if (cutoff && new Date(row.timestamp.replace(' ', 'T')) < cutoff) return false;
                 return true;
             });
 
-            // 修复 Bug 1: 构造 [时间, 数值] 的二维数组，用于 ECharts 时间轴
-            const seriesData = filtered.map(item => {
-                let timeStr = item.timestamp;
-                // 确保时间字符串格式标准，便于 ECharts 解析
-                if (timeStr && timeStr.indexOf('T') === -1) {
-                    timeStr = timeStr.replace(' ', 'T');
-                }
-                return [timeStr, parseFloat(item.current)];
-            });
-
             const isDark = document.documentElement.classList.contains('dark');
-            const lineColor = isDark ? '#60a5fa' : '#2563EB';
+            const accentColor = isDark ? '#60a5fa' : '#2563EB';
 
-            const option = {
+            myChart.setOption({
                 backgroundColor: 'transparent',
-                tooltip: {
+                tooltip: { 
                     trigger: 'axis',
-                    formatter: function (params) {
-                        const p = params[0];
-                        // 格式化时间显示
-                        let date = new Date(p.value[0]);
-                        let timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                        return `${timeStr}<br/>${p.marker}电流: <b>${p.value[1]} mA</b>`;
-                    }
+                    backgroundColor: isDark ? 'rgba(31, 41, 55, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                    borderColor: 'transparent',
+                    textStyle: { color: isDark ? '#fff' : '#000' }
                 },
-                grid: {
-                    left: '3%',
-                    right: '4%',
-                    bottom: '3%',
-                    containLabel: true
+                grid: { left: '4%', right: '4%', bottom: '10%', containLabel: true },
+                xAxis: { 
+                    type: 'category', 
+                    data: filtered.map(i => i.timestamp.split(' ')[1]),
+                    axisLine: { lineStyle: { color: isDark ? '#4b5563' : '#e5e7eb' } }
                 },
-                xAxis: {
-                    type: 'time', // 修复 Bug 1: 将轴类型改为 time
-                    boundaryGap: false,
-                    splitLine: {
-                        show: false
-                    },
-                    axisLabel: {
-                        color: isDark ? '#9ca3af' : '#4b5563',
-                        formatter: '{HH}:{mm}' // 简化时间显示
-                    }
+                yAxis: { 
+                    type: 'value', 
+                    name: 'mA',
+                    splitLine: { lineStyle: { type: 'dashed', color: isDark ? '#374151' : '#f3f4f6' } }
                 },
-                yAxis: {
-                    type: 'value',
-                    name: '电流 (mA)',
-                    splitLine: {
-                        lineStyle: {
-                            type: 'dashed',
-                            color: isDark ? '#374151' : '#ccc'
-                        }
-                    },
-                    axisLabel: {
-                        color: isDark ? '#9ca3af' : '#4b5563'
-                    },
-                    nameTextStyle: {
-                        color: isDark ? '#9ca3af' : '#4b5563'
+                series: [{
+                    type: 'line',
+                    data: filtered.map(i => parseFloat(i.current)),
+                    smooth: true,
+                    showSymbol: false,
+                    lineStyle: { width: 3, color: accentColor },
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: accentColor + '66' },
+                            { offset: 1, color: accentColor + '00' }
+                        ])
                     }
-                },
-                dataZoom: [
-                    { type: 'inside', start: 0, end: 100 },
-                    { start: 0, end: 100 }
-                ],
-                series: [
-                    {
-                        name: 'Current',
-                        type: 'line',
-                        data: seriesData, // 使用新的数据格式
-                        smooth: true,
-                        showSymbol: true, // 修复 Bug 1: 显示数据点
-                        symbolSize: 6,    // 调整点的大小
-                        symbol: 'circle',
-                        lineStyle: { width: 2, color: lineColor },
-                        itemStyle: { color: lineColor },
-                        areaStyle: {
-                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(37, 99, 235, 0.5)' },
-                                { offset: 1, color: isDark ? 'rgba(96, 165, 250, 0.05)' : 'rgba(37, 99, 235, 0.05)' }
-                            ])
-                        }
-                    }
-                ]
-            };
-
-            myChart.setOption(option, true);
+                }]
+            }, true);
         }
 
-        // --- 初始化序列 ---
-        
-        // 1. 初始化下拉框选项
+        // 初始化
         const portSelect = document.getElementById('chart-port');
-        if(portSelect && portSelect.options.length === 0) {
-            for (let i = 1; i <= 12; i++) {
-                const opt = document.createElement('option');
-                opt.value = i;
-                opt.text = 'Port ' + i;
-                portSelect.appendChild(opt);
-            }
+        for (let i = 1; i <= 12; i++) {
+            const opt = document.createElement('option');
+            opt.value = i; opt.text = '端口 ' + i;
+            portSelect.appendChild(opt);
         }
 
-        // 2. 初始化主题
+        updateTimeRange(4);
         applyTheme();
-
-        // 3. 初始加载数据
         fetchData();
         loadHistory();
 
-        // 4. 定时刷新
         setInterval(() => {
-            const el = document.getElementById('refresh-countdown');
             if (countdown > 0) {
                 countdown--;
-                if (el) el.textContent = `刷新: ${countdown}s`;
             } else {
-                fetchData();
-                loadHistory(); 
-                countdown = 60;
-                if (el) el.textContent = `刷新: ${countdown}s`;
+                fetchData(); loadHistory(); countdown = 60;
             }
+            document.getElementById('refresh-countdown').textContent = `刷新: ${countdown}s`;
         }, 1000);
-
-        // 5. 自动主题检测
-        setInterval(() => {
-            if (!localStorage.getItem('theme') || localStorage.getItem('theme') === 'auto') {
-                applyTheme();
-            }
-        }, 60000);
-
     </script>
 </body>
 </html>
