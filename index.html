@@ -42,7 +42,7 @@
 </head>
 <body class="bg-gray-50 min-h-screen text-gray-800 font-sans transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
 
-    <nav class="bg-white shadow-sm sticky top-0 z-50 transition-colors duration-300 dark:bg-gray-800 dark:border-b dark:border-gray-700">
+    <nav class="bg-white/20 backdrop-blur-md shadow-sm sticky top-0 z-50 transition-colors duration-300 dark:bg-gray-800/20 dark:border-b dark:border-gray-700">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center">
@@ -86,7 +86,7 @@
             </div>
         </div>
 
-        <div class="mt-12 bg-white rounded-xl shadow-lg border border-gray-100 p-6 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-700">
+        <div class="mt-12 bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 p-6 transition-colors duration-300 dark:bg-gray-800/70 dark:border-gray-700">
             <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                 <h2 class="text-xl font-bold text-gray-800 flex items-center dark:text-white">
                     <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,7 +236,7 @@
                 if (timeDiff !== null && timeDiff > 10) timeClass = 'text-red-400 font-bold'; 
 
                 const cardHTML = `
-                    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800 dark:border-gray-700">
+                    <div class="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800/70 dark:border-gray-700">
                         <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/50 dark:border-gray-600">
                             <div>
                                 <h3 class="text-lg font-bold text-gray-800 dark:text-white">${device.name}</h3>
@@ -437,12 +437,12 @@
                         showSymbol: true, // 修复 Bug 1: 显示数据点
                         symbolSize: 6,    // 调整点的大小
                         symbol: 'circle',
-                        lineStyle: { width: 2, color: lineColor },
+                        lineStyle: { width: 4, color: lineColor },
                         itemStyle: { color: lineColor },
                         areaStyle: {
                             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                                { offset: 0, color: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(37, 99, 235, 0.5)' },
-                                { offset: 1, color: isDark ? 'rgba(96, 165, 250, 0.05)' : 'rgba(37, 99, 235, 0.05)' }
+                                { offset: 0, color: isDark ? 'rgba(96, 165, 250, 0.6)' : 'rgba(37, 99, 235, 0.6)' },
+                                { offset: 1, color: isDark ? 'rgba(96, 165, 250, 0)' : 'rgba(37, 99, 235, 0)' }
                             ])
                         }
                     }
@@ -460,7 +460,7 @@
             for (let i = 1; i <= 12; i++) {
                 const opt = document.createElement('option');
                 opt.value = i;
-                opt.text = 'Port ' + i;
+                opt.text = '端口' + i;
                 portSelect.appendChild(opt);
             }
         }
