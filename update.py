@@ -135,7 +135,7 @@ def main():
 
         frontend_data.append(device_info)
         # Sleep briefly to be nice to the API
-        time.sleep(1)
+        time.sleep(3)
 
     # 1. Save Frontend Status JSON
     try:
