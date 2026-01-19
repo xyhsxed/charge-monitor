@@ -6,21 +6,28 @@ DATA_DIR = os.path.join(BASE_DIR, 'data')
 DEVICE_LIST = [423297, 417598, 418297, 418351]
 HISTORY_FILE = os.path.join(DATA_DIR, 'history.csv')
 STATUS_FILE = os.path.join(DATA_DIR, 'status.json')
-DAYS_TO_KEEP = 3
+DAYS_TO_KEEP = 3   # 保留历史数据天数
+RETRY_COUNT = 3  # 重试次数
+RETRY_DELAY = 2  # 重试间隔秒数
 
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
 def fetch_device_data(device_id):
-    """Fetch data from the external API for a single device."""
+    """Fetch data from the external API for a single device with retry mechanism."""
     url = 'https://api.power.powerliber.com/client/1/device/port-list'
     params = {'device_id': device_id}
-    try:
-        response = requests.get(url, params=params, timeout=20)
-        return response.json()
-    except Exception as e:
-        print(f"Request failed for {device_id}: {e}")
-        return None
+    
+    for attempt in range(RETRY_COUNT):
+        try:
+            response = requests.get(url, params=params, timeout=20)
+            return response.json()
+        except Exception as e:
+            print(f"Request failed for {device_id} (Attempt {attempt + 1}/{RETRY_COUNT}): {e}")
+            if attempt < RETRY_COUNT - 1:
+                time.sleep(RETRY_DELAY)
+    
+    return None
 
 def clean_history_csv():
     """Keep only the last DAYS_TO_KEEP days of data in the CSV."""
