@@ -187,10 +187,10 @@
 
         // 3. 辅助函数
         function getStatusColor(current) {
-            if (current <= 50) return 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/30 dark:border-green-800 dark:text-green-300';
-            if (current <= 500) return 'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-800 dark:text-yellow-300';
-            if (current <= 1000) return 'bg-orange-50 border-orange-200 text-orange-700 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-300';
-            return 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300';
+            if (current <= 50) return 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900/50 dark:border-green-600 dark:text-green-200';
+            if (current <= 500) return 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/50 dark:border-yellow-600 dark:text-yellow-200';
+            if (current <= 1000) return 'bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-900/50 dark:border-orange-600 dark:text-orange-200';
+            return 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900/50 dark:border-red-600 dark:text-red-200';
         }
 
         // 4. 数据获取与渲染
@@ -448,7 +448,7 @@
                         const p = params[0];
                         // 格式化时间显示
                         let date = new Date(p.value[0]);
-                        let timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        let timeStr = date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
                         return `${timeStr}<br/>${p.marker}电流: <b>${p.value[1]} mA</b>`;
                     }
                 },
