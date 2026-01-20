@@ -137,7 +137,8 @@
 
 <script>
         // 1. 全局变量声明
-        const API_URL = './data/status.json';
+        const API_URL = 'https://api.power.powerliber.com/client/1/device/port-list';
+        const DEVICE_LIST = [423297, 417598, 418297, 418351];
         let refreshTimer = null;
         let countdown = 60;
         let historyData = [];
@@ -195,10 +196,69 @@
         // 4. 数据获取与渲染
         async function fetchData() {
             try {
-                const response = await fetch(API_URL + '?t=' + new Date().getTime());
-                if (!response.ok) throw new Error('Network response was not ok');
-                const data = await response.json();
-                render(data);
+                const frontend_data = [];
+                
+                for (let i = 0; i < DEVICE_LIST.length; i++) {
+                    const device_id = DEVICE_LIST[i];
+                    const response = await fetch(API_URL + '?device_id=' + device_id);
+                    if (!response.ok) throw new Error(`Failed to fetch device ${device_id}`);
+                    
+                    const raw_data = await response.json();
+                    const now = new Date();
+                    const timestamp = now.toISOString();
+                    
+                    const device_info = {
+                        id: device_id,
+                        name: `充电桩${i + 1}`,
+                        updated_at: timestamp,
+                        ports: []
+                    };
+                    
+                    if (raw_data && raw_data.code === 0) {
+                        const response_list = raw_data.data && raw_data.data.list ? raw_data.data.list : [];
+                        
+                        // Normalize to 12 ports
+                        for (let p_idx = 0; p_idx < 12; p_idx++) {
+                            if (p_idx < response_list.length) {
+                                const item = response_list[p_idx];
+                                device_info.ports.push({
+                                    port_number: p_idx + 1,
+                                    current: item.current || 0,
+                                    voltage: item.voltage || 0,
+                                    power: item.power || 0,
+                                    status: item.charge_status || 0,
+                                    online: item.online || 0
+                                });
+                            } else {
+                                device_info.ports.push({
+                                    port_number: p_idx + 1,
+                                    current: 0,
+                                    voltage: 0,
+                                    power: 0,
+                                    status: 0,
+                                    online: 0
+                                });
+                            }
+                        }
+                    } else {
+                        device_info.error = raw_data ? `API Error: ${raw_data.msg || 'Unknown'}` : 'Fetch failed';
+                        // Add 12 empty ports if API fails
+                        for (let p_idx = 0; p_idx < 12; p_idx++) {
+                            device_info.ports.push({
+                                port_number: p_idx + 1,
+                                current: 0,
+                                voltage: 0,
+                                power: 0,
+                                status: 0,
+                                online: 0
+                            });
+                        }
+                    }
+                    
+                    frontend_data.push(device_info);
+                }
+                
+                render(frontend_data);
                 
             } catch (error) {
                 console.error('Error fetching data:', error);
@@ -222,7 +282,7 @@
 
                 if (device.updated_at) {
                     const date = new Date(device.updated_at);
-                    const movedDate = new Date(date.getTime() + 8 * 60 * 60 * 1000); // UTC+8
+                    const movedDate = new Date(date.getTime());
                     
                     const h = movedDate.getHours().toString().padStart(2, '0');
                     const m = movedDate.getMinutes().toString().padStart(2, '0');
