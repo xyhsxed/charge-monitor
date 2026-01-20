@@ -19,7 +19,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.10'
 
     - name: Install dependencies
       run: |
@@ -34,7 +34,7 @@ jobs:
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
-        git add data/status.json data/history.csv
+        git add data/history.csv
         
         CURRENT_TIME=$(date "+%Y-%m-%d %H:%M:%S")
         
