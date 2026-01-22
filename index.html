@@ -351,22 +351,35 @@
                     myChart && myChart.resize();
                 });
                 
+                // 绑定事件并处理 localstorage 存储
                 const devSelect = document.getElementById('chart-device');
                 if (devSelect) {
                     devSelect.removeEventListener('change', updateChart);
-                    devSelect.addEventListener('change', updateChart);
+                    devSelect.removeEventListener('change', handleChartConfigChange);
+                    devSelect.addEventListener('change', handleChartConfigChange);
                 }
                 
                 const portSelect = document.getElementById('chart-port');
                 if(portSelect) {
                     portSelect.removeEventListener('change', updateChart);
-                    portSelect.addEventListener('change', updateChart);
+                    portSelect.removeEventListener('change', handleChartConfigChange);
+                    portSelect.addEventListener('change', handleChartConfigChange);
                 }
             }
         }
 
+        // 新增：统一处理配置变更并保存
+        function handleChartConfigChange() {
+            const deviceId = document.getElementById('chart-device').value;
+            const portId = document.getElementById('chart-port').value;
+            localStorage.setItem('chart-device', deviceId);
+            localStorage.setItem('chart-port', portId);
+            updateChart();
+        }
+
         function updateTimeRange(hours) {
             selectedHours = hours;
+            localStorage.setItem('chart-time-range', hours);
             
             // 修复 Bug 2: 只切换颜色类，不覆盖结构类（如 rounded 等）
             document.querySelectorAll('.time-range-btn').forEach(btn => {
@@ -525,6 +538,27 @@
                 opt.text = '端口' + i;
                 portSelect.appendChild(opt);
             }
+        }
+
+        // 1.5 恢复保存的配置 (新增)
+        const savedDevice = localStorage.getItem('chart-device');
+        if (savedDevice) {
+            const devSelect = document.getElementById('chart-device');
+            // 确保保存的设备ID在选项列表中存在
+            if (devSelect && devSelect.querySelector(`option[value="${savedDevice}"]`)) {
+                devSelect.value = savedDevice;
+            }
+        }
+
+        const savedPort = localStorage.getItem('chart-port');
+        if (savedPort) {
+            const ps = document.getElementById('chart-port');
+            if (ps) ps.value = savedPort;
+        }
+        
+        const savedTimeRange = localStorage.getItem('chart-time-range');
+        if (savedTimeRange !== null) {
+            selectedHours = parseInt(savedTimeRange);
         }
 
         // 2. 初始化主题
