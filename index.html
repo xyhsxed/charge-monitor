@@ -399,7 +399,9 @@
         }
 
         function loadHistory() {
-            Papa.parse('./data/history.csv', {
+            // 添加时间戳参数，强制浏览器每次从服务器获取最新文件，绕过缓存
+            const timestamp = new Date().getTime();
+            Papa.parse(`./data/history.csv?t=${timestamp}`, {
                 download: true,
                 header: true,
                 skipEmptyLines: true,
