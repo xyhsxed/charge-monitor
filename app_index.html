@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教四充电桩实时监控</title>
+    <script src="lib/tailwindcss.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="lib/echarts.min.js"></script>
+    <script src="lib/papaparse.min.js"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* 自定义滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569; 
+        }
+        .dark ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+    </style>
+</head>
+<body class="bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-100 via-slate-50 to-gray-100 min-h-screen text-gray-800 font-sans transition-colors duration-300 dark:bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] dark:from-slate-900 dark:via-gray-950 dark:to-black dark:text-gray-100">
+
+    <nav class="bg-white/10 backdrop-blur-md shadow-sm sticky top-0 z-50 transition-colors duration-300 dark:bg-gray-800/10 dark:border-b dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <svg class="h-8 w-8 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <h1 class="text-xl font-bold text-gray-900 transition-colors duration-300 dark:text-white">充电桩监控</h1>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                        <select id="theme-selector" onchange="handleThemeChange(this.value)" class="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-1.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                            <option value="auto">自动</option>
+                            <option value="light">日间主题</option>
+                            <option value="dark">夜间主题</option>
+                        </select>
+                    </div>
+
+                    <div class="text-xs text-gray-500 font-mono w-20 text-right dark:text-gray-400" id="refresh-countdown">刷新: 60s</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <div class="flex flex-wrap justify-center gap-4 mb-8 text-sm text-gray-600 dark:text-gray-300">
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>空闲 (&lt;50mA)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></span>小电流 (50-500mA)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-orange-500 mr-2"></span>中电流 (500-1000mA)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-600 mr-2"></span>大电流 (&gt;1000mA)</div>
+        </div>
+
+        <div id="app-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div class="col-span-full text-center py-20 text-gray-400">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
+                <p>正在加载数据...</p>
+            </div>
+        </div>
+
+        <div class="mt-12 bg-white/20 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 p-6 transition-colors duration-300 dark:bg-gray-800/20 dark:border-gray-700">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-xl font-bold text-gray-800 flex items-center dark:text-white">
+                    <svg class="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                    历史电流
+                </h2>
+                
+                <div class="flex flex-wrap items-center gap-3">
+                    <select id="chart-device" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                        <option value="423297">充电桩1</option>
+                        <option value="417598">充电桩2</option>
+                        <option value="418297">充电桩3</option>
+                        <option value="418351">充电桩4</option>
+                    </select>
+                    
+                    <select id="chart-port" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                        </select>
+                    
+                    <div class="inline-flex rounded-md shadow-sm isolate" role="group">
+                        <button type="button" onclick="updateTimeRange(3)" class="time-range-btn relative px-4 py-2 text-sm font-medium border rounded-l-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="3">
+                            3h
+                        </button>
+                        <button type="button" onclick="updateTimeRange(8)" class="time-range-btn relative -ml-px px-4 py-2 text-sm font-medium border focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="8">
+                            8h
+                        </button>
+                        <button type="button" onclick="updateTimeRange(12)" class="time-range-btn relative -ml-px px-4 py-2 text-sm font-medium border rounded-r-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="12">
+                            12h
+                        </button>
+                    </div>
+                    
+                    <button type="button" onclick="updateTimeRange(0)" class="time-range-btn ml-2 px-4 py-2 text-sm font-medium border rounded-lg focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700 dark:focus:ring-blue-500 dark:focus:text-white" data-hours="0">
+                        全部
+                    </button>
+                </div>
+            </div>
+            
+            <div id="main-chart" class="w-full h-[400px]"></div>
+        </div>
+
+    </main>
+
+    <footer class="bg-white border-t mt-12 py-6 transition-colors duration-300 dark:bg-gray-800 dark:border-gray-700">
+        <div class="text-center text-gray-400 text-sm">
+            <p>&copy; 2026 Charging Monitor by xyh</p>
+        </div>
+    </footer>
+
+<script>
+        // 1. 全局变量声明
+        const API_URL = 'https://api.power.powerliber.com/client/1/device/port-list';
+        const DEVICE_LIST = [423297, 417598, 418297, 418351];
+        let refreshTimer = null;
+        let countdown = 60;
+        let historyData = [];
+        let myChart = null;
+        let selectedHours = 3; 
+
+        // 定义 Active 和 Inactive 的样式类（仅颜色相关，不包含布局类）
+        const BTN_ACTIVE_CLASSES = ['bg-gray-100', 'text-blue-700', 'border-blue-700', 'z-20', 'dark:bg-gray-600', 'dark:text-white', 'dark:border-gray-500'];
+        const BTN_INACTIVE_CLASSES = ['bg-white', 'text-gray-900', 'border-gray-200', 'hover:bg-gray-100', 'hover:text-blue-700', 'dark:bg-gray-800', 'dark:text-gray-300', 'dark:border-gray-600', 'dark:hover:bg-gray-700', 'dark:hover:text-white'];
+
+        // 2. 主题切换逻辑
+        function handleThemeChange(mode) {
+            localStorage.setItem('theme', mode);
+            applyTheme();
+        }
+
+        function applyTheme() {
+            let mode = localStorage.getItem('theme') || 'auto';
+            const selector = document.getElementById('theme-selector');
+            if(selector) selector.value = mode;
+
+            let isDark = false;
+            if (mode === 'auto') {
+                const hour = new Date().getHours();
+                isDark = hour >= 18 || hour < 6;
+            } else {
+                isDark = mode === 'dark';
+            }
+
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            const chartDom = document.getElementById('main-chart');
+            if (chartDom) {
+                if (myChart) {
+                    myChart.dispose();
+                }
+                initChart(isDark ? 'dark' : undefined);
+                // 重新应用按钮样式以匹配暗色模式
+                updateTimeRange(selectedHours);
+            }
+        }
+
+        // 3. 辅助函数
+        function getStatusColor(current) {
+            if (current <= 50) return 'bg-green-100 border-green-300 text-green-800 dark:bg-green-900/50 dark:border-green-600 dark:text-green-200';
+            if (current <= 500) return 'bg-yellow-100 border-yellow-300 text-yellow-800 dark:bg-yellow-900/50 dark:border-yellow-600 dark:text-yellow-200';
+            if (current <= 1000) return 'bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-900/50 dark:border-orange-600 dark:text-orange-200';
+            return 'bg-red-100 border-red-300 text-red-800 dark:bg-red-900/50 dark:border-red-600 dark:text-red-200';
+        }
+
+        // 4. 数据获取与渲染
+        async function fetchData() {
+            try {
+                const frontend_data = [];
+                
+                for (let i = 0; i < DEVICE_LIST.length; i++) {
+                    const device_id = DEVICE_LIST[i];
+                    const response = await fetch(API_URL + '?device_id=' + device_id);
+                    if (!response.ok) throw new Error(`Failed to fetch device ${device_id}`);
+                    
+                    const raw_data = await response.json();
+                    const now = new Date();
+                    const timestamp = now.toISOString();
+                    
+                    const device_info = {
+                        id: device_id,
+                        name: `充电桩${i + 1}`,
+                        updated_at: timestamp,
+                        ports: []
+                    };
+                    
+                    if (raw_data && raw_data.code === 0) {
+                        const response_list = raw_data.data && raw_data.data.list ? raw_data.data.list : [];
+                        
+                        // Normalize to 12 ports
+                        for (let p_idx = 0; p_idx < 12; p_idx++) {
+                            if (p_idx < response_list.length) {
+                                const item = response_list[p_idx];
+                                device_info.ports.push({
+                                    port_number: p_idx + 1,
+                                    current: item.current || 0,
+                                    voltage: item.voltage || 0,
+                                    power: item.power || 0,
+                                    status: item.charge_status || 0,
+                                    online: item.online || 0
+                                });
+                            } else {
+                                device_info.ports.push({
+                                    port_number: p_idx + 1,
+                                    current: 0,
+                                    voltage: 0,
+                                    power: 0,
+                                    status: 0,
+                                    online: 0
+                                });
+                            }
+                        }
+                    } else {
+                        device_info.error = raw_data ? `API Error: ${raw_data.msg || 'Unknown'}` : 'Fetch failed';
+                        // Add 12 empty ports if API fails
+                        for (let p_idx = 0; p_idx < 12; p_idx++) {
+                            device_info.ports.push({
+                                port_number: p_idx + 1,
+                                current: 0,
+                                voltage: 0,
+                                power: 0,
+                                status: 0,
+                                online: 0
+                            });
+                        }
+                    }
+                    
+                    frontend_data.push(device_info);
+                }
+                
+                render(frontend_data);
+                
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('app-container').innerHTML = `
+                    <div class="col-span-full text-center py-10 text-red-500 bg-red-50 rounded-lg dark:bg-red-900/20 dark:text-red-400">
+                        <p class="font-bold">数据加载失败</p>
+                        <p class="text-sm mt-2">${error.message}</p>
+                        <button onclick="fetchData()" class="mt-4 px-4 py-2 bg-white border border-red-200 rounded shadow-sm hover:bg-gray-50 text-sm dark:bg-gray-800 dark:border-gray-600 dark:hover:bg-gray-700">重试</button>
+                    </div>
+                `;
+            }
+        }
+
+        function render(devices) {
+            const container = document.getElementById('app-container');
+            container.innerHTML = '';
+
+            devices.forEach((device) => {
+                let updatedTime = '--:--';
+                let timeDiff = null;
+
+                if (device.updated_at) {
+                    const date = new Date(device.updated_at);
+                    const movedDate = new Date(date.getTime());
+                    
+                    const h = movedDate.getHours().toString().padStart(2, '0');
+                    const m = movedDate.getMinutes().toString().padStart(2, '0');
+                    const s = movedDate.getSeconds().toString().padStart(2, '0');
+                    updatedTime = `${h}:${m}:${s}`;
+                    
+                    timeDiff = Math.floor((new Date() - movedDate) / 60000);
+                }
+                
+                let timeClass = 'text-gray-400';
+                if (timeDiff !== null && timeDiff > 10) timeClass = 'text-red-400 font-bold'; 
+
+                const cardHTML = `
+                    <div class="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800/70 dark:border-gray-700">
+                    <div class="bg-white/70 backdrop-blur-md rounded-xl shadow-lg border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 fade-in flex flex-col dark:bg-gray-800/70 dark:border-gray-700">
+                        <div class="px-6 py-4 border-b border-gray-50 flex justify-between items-center bg-gray-50/50 dark:bg-gray-700/50 dark:border-gray-600">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800 dark:text-white">${device.name}</h3>
+                                <div class="text-xs text-gray-400 font-mono">ID:${device.id}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">${device.ports.filter(p => p.current > 50).length}<span class="text-sm text-gray-400 font-normal">/12</span></div>
+                                <div class="text-xs ${timeClass}">上次更新: ${updatedTime}</div>
+                            </div>
+                        </div>
+                        <div class="p-4 grid grid-cols-2 gap-3">
+                            ${device.ports.map(port => {
+                                const voltage = (port.voltage / 100).toFixed(1);
+                                const isOffline = port.online === 0;
+                                const statusColor = isOffline ? 'bg-gray-100 text-gray-400 border-gray-200 dark:bg-gray-700/60 dark:border-gray-600 dark:text-gray-500' : getStatusColor(port.current);
+                                
+                                return `
+                                <div class="flex flex-col p-2 rounded-lg border ${statusColor} transition-colors relative group">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs font-bold opacity-70">Port ${port.port_number}</span>
+                                        ${isOffline ? '<span class="text-[10px]">离线</span>' : ''}
+                                        ${port.status === 1 ? '<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>' : ''}
+                                    </div>
+                                    <div class="flex items-baseline space-x-1">
+                                        <span class="text-lg font-bold font-mono leading-none">${port.current}</span>
+                                        <span class="text-[10px] opacity-50">mA</span>
+                                    </div>
+                                    <div class="flex justify-between mt-1 text-[10px] opacity-80 font-mono">
+                                        <span>${port.power}W</span>
+                                        <span>${voltage}V</span>
+                                    </div>
+                                </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+            });
+        }
+
+        // 5. 图表逻辑
+        function initChart(theme) {
+            const chartDom = document.getElementById('main-chart');
+            if (!chartDom) return;
+            
+            if (!echarts.getInstanceByDom(chartDom)) {
+                myChart = echarts.init(chartDom, theme);
+                
+                window.addEventListener('resize', function() {
+                    myChart && myChart.resize();
+                });
+                
+                // 绑定事件并处理 localstorage 存储
+                const devSelect = document.getElementById('chart-device');
+                if (devSelect) {
+                    devSelect.removeEventListener('change', updateChart);
+                    devSelect.removeEventListener('change', handleChartConfigChange);
+                    devSelect.addEventListener('change', handleChartConfigChange);
+                }
+                
+                const portSelect = document.getElementById('chart-port');
+                if(portSelect) {
+                    portSelect.removeEventListener('change', updateChart);
+                    portSelect.removeEventListener('change', handleChartConfigChange);
+                    portSelect.addEventListener('change', handleChartConfigChange);
+                }
+            }
+        }
+
+        // 新增：统一处理配置变更并保存
+        function handleChartConfigChange() {
+            const deviceId = document.getElementById('chart-device').value;
+            const portId = document.getElementById('chart-port').value;
+            localStorage.setItem('chart-device', deviceId);
+            localStorage.setItem('chart-port', portId);
+            updateChart();
+        }
+
+        function updateTimeRange(hours) {
+            selectedHours = hours;
+            localStorage.setItem('chart-time-range', hours);
+            
+            // 修复 Bug 2: 只切换颜色类，不覆盖结构类（如 rounded 等）
+            document.querySelectorAll('.time-range-btn').forEach(btn => {
+                const btnHours = parseInt(btn.getAttribute('data-hours'));
+                
+                // 先移除所有状态类
+                btn.classList.remove(...BTN_ACTIVE_CLASSES);
+                btn.classList.remove(...BTN_INACTIVE_CLASSES);
+
+                if (btnHours === hours) {
+                     btn.classList.add(...BTN_ACTIVE_CLASSES);
+                } else {
+                     btn.classList.add(...BTN_INACTIVE_CLASSES);
+                }
+            });
+            updateChart();
+        }
+
+        function loadHistory() {
+            // 添加时间戳参数，强制浏览器每次从服务器获取最新文件，绕过缓存
+            const timestamp = new Date().getTime();
+            Papa.parse(`./data/history.csv?t=${timestamp}`, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    historyData = results.data;
+                    updateChart();
+                },
+                error: function(err) {
+                    console.error("CSV Parse Error:", err);
+                }
+            });
+        }
+
+        function updateChart() {
+            if (!myChart || !historyData || historyData.length === 0) return;
+
+            const deviceId = document.getElementById('chart-device').value;
+            const portNum = document.getElementById('chart-port').value;
+            
+            let cutoff = null;
+            if (selectedHours > 0) {
+                const now = new Date();
+                cutoff = new Date(now.getTime() - selectedHours * 60 * 60 * 1000);
+            }
+
+            const filtered = historyData.filter(row => {
+                if (row.device_id != deviceId) return false;
+                if (row.port != portNum) return false;
+                
+                if (cutoff) {
+                    let timeStr = row.timestamp;
+                    if (timeStr && timeStr.indexOf('T') === -1) {
+                        timeStr = timeStr.replace(' ', 'T');
+                    }
+                    const rowDate = new Date(timeStr); 
+                    if (rowDate < cutoff) return false;
+                }
+                return true;
+            });
+
+            // 修复 Bug 1: 构造 [时间, 数值] 的二维数组，用于 ECharts 时间轴
+            const seriesData = filtered.map(item => {
+                let timeStr = item.timestamp;
+                // 确保时间字符串格式标准，便于 ECharts 解析
+                if (timeStr && timeStr.indexOf('T') === -1) {
+                    timeStr = timeStr.replace(' ', 'T');
+                }
+                return [timeStr, parseFloat(item.current)];
+            });
+
+            const isDark = document.documentElement.classList.contains('dark');
+            const lineColor = isDark ? '#60a5fa' : '#2563EB';
+
+            const option = {
+                backgroundColor: 'transparent',
+                tooltip: {
+                    trigger: 'axis',
+                    formatter: function (params) {
+                        const p = params[0];
+                        // 格式化时间显示
+                        let date = new Date(p.value[0]);
+                        let timeStr = date.toLocaleString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                        return `${timeStr}<br/>${p.marker}电流: <b>${p.value[1]} mA</b>`;
+                    }
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'time', // 修复 Bug 1: 将轴类型改为 time
+                    boundaryGap: false,
+                    splitLine: {
+                        show: false
+                    },
+                    axisLabel: {
+                        color: isDark ? '#9ca3af' : '#4b5563',
+                        formatter: '{HH}:{mm}' // 简化时间显示
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '充电电流 (mA)',
+                    splitLine: {
+                        lineStyle: {
+                            type: 'dashed',
+                            color: isDark ? '#374151' : '#ccc'
+                        }
+                    },
+                    axisLabel: {
+                        color: isDark ? '#9ca3af' : '#4b5563'
+                    },
+                    nameTextStyle: {
+                        color: isDark ? '#9ca3af' : '#4b5563'
+                    }
+                },
+                dataZoom: [
+                    { type: 'inside', start: 0, end: 100 },
+                    { start: 0, end: 100 }
+                ],
+                series: [
+                    {
+                        name: 'Current',
+                        type: 'line',
+                        data: seriesData, // 使用新的数据格式
+                        smooth: true,
+                        showSymbol: true, // 显示数据点
+                        symbolSize: 7,    // 调整点的大小
+                        symbol: 'circle',
+                        lineStyle: { width: 3, color: lineColor },
+                        itemStyle: { color: lineColor },
+                        areaStyle: {
+                            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                                { offset: 0, color: isDark ? 'rgba(96, 165, 250, 0.5)' : 'rgba(37, 99, 235, 0.5)' },
+                                { offset: 1, color: isDark ? 'rgba(96, 165, 250, 0)' : 'rgba(37, 99, 235, 0)' }
+                            ])
+                        }
+                    }
+                ]
+            };
+
+            myChart.setOption(option, true);
+        }
+
+        // --- 初始化序列 ---
+        
+        // 1. 初始化下拉框选项
+        const portSelect = document.getElementById('chart-port');
+        if(portSelect && portSelect.options.length === 0) {
+            for (let i = 1; i <= 12; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.text = '端口' + i;
+                opt.text = '端口' + i;
+                portSelect.appendChild(opt);
+            }
+        }
+
+        // 1.5 恢复保存的配置 (新增)
+        const savedDevice = localStorage.getItem('chart-device');
+        if (savedDevice) {
+            const devSelect = document.getElementById('chart-device');
+            // 确保保存的设备ID在选项列表中存在
+            if (devSelect && devSelect.querySelector(`option[value="${savedDevice}"]`)) {
+                devSelect.value = savedDevice;
+            }
+        }
+
+        const savedPort = localStorage.getItem('chart-port');
+        if (savedPort) {
+            const ps = document.getElementById('chart-port');
+            if (ps) ps.value = savedPort;
+        }
+        
+        const savedTimeRange = localStorage.getItem('chart-time-range');
+        if (savedTimeRange !== null) {
+            selectedHours = parseInt(savedTimeRange);
+        }
+
+        // 2. 初始化主题
+        applyTheme();
+
+        // 3. 初始加载数据
+        fetchData();
+        loadHistory();
+
+        // 4. 定时刷新
+        setInterval(() => {
+            const el = document.getElementById('refresh-countdown');
+            if (countdown > 0) {
+                countdown--;
+                if (el) el.textContent = `刷新: ${countdown}s`;
+            } else {
+                fetchData();
+                loadHistory(); 
+                countdown = 60;
+                if (el) el.textContent = `刷新: ${countdown}s`;
+            }
+        }, 1000);
+
+        // 5. 自动主题检测
+        setInterval(() => {
+            if (!localStorage.getItem('theme') || localStorage.getItem('theme') === 'auto') {
+                applyTheme();
+            }
+        }, 60000);
+
+    </script>
+</body>
+</html>
